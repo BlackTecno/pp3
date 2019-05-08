@@ -230,6 +230,8 @@ void gauss() {
 		}
 	}
 
+	MPI_Finalize();
+
 	/* Back substitution */
 	for (row = N - 1; row >= 0; row--) {
 		X[row] = B[row];
