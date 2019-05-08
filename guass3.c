@@ -15,7 +15,7 @@ int N;  /* Matrix size */
 int procs, rank;  /* Number of processors to use */
 
 /* Matrices and vectors */
-volatile float A[MAXN][MAXN], B[MAXN], X[MAXN];
+float A[MAXN][MAXN], B[MAXN], X[MAXN];
 /* A * X = B, solve for X */
 
 /* junk */
@@ -134,11 +134,13 @@ void print_X() {
 
 void main(int argc, char **argv) {
 	/* Timing variables */
-	struct timeval etstart, etstop;  /* Elapsed times using gettimeofday() */
+	double etstart, etstop;  /* Elapsed times using gettimeofday() */
 	struct timezone tzdummy;
 	clock_t etstart2, etstop2;  /* Elapsed times using times() */
 	unsigned long long usecstart, usecstop;
 	struct tms cputstart, cputstop;  /* CPU times for my processes */
+
+
 
 	/* Process program parameters */
 	parameters(argc, argv);
@@ -150,19 +152,26 @@ void main(int argc, char **argv) {
 	print_inputs();
 
 	/* Start Clock */
-	printf("\nStarting clock.\n");
+/*	printf("\nStarting clock.\n");
 	gettimeofday(&etstart, &tzdummy);
-	etstart2 = times(&cputstart);
+	etstart2 = times(&cputstart);*/
 
+	MPI_Init(&argc, &argv);
+
+	etstart = MPI_Wtime();
 	/* Gaussian Elimination */
 	gauss();
+
+	MPI_Finalize();
+
+	etstop = MPI_Wtime();
 
 	/* Stop Clock */
 	gettimeofday(&etstop, &tzdummy);
 	etstop2 = times(&cputstop);
 	printf("Stopped clock.\n");
-	usecstart = (unsigned long long)etstart.tv_sec * 1000000 + etstart.tv_usec;
-	usecstop = (unsigned long long)etstop.tv_sec * 1000000 + etstop.tv_usec;
+	usecstart = (unsigned long long)etstart * 1000000 + etstart;
+	usecstop = (unsigned long long)etstop * 1000000 + etstop;
 
 	/* Display output */
 	print_X();
@@ -195,157 +204,45 @@ void main(int argc, char **argv) {
 /* ------------------ Above Was Provided --------------------- */
 
 void gauss() {
-	MPI_Status status;
-	MPI_Request request;
-	int row, col, i, norm, rank;
+	int i, norm, row, col;
 	float mult;
+	int map[MAXN];
 
-	MPI_Barrier(MPI_COMM_WORLD);
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);   /* get current process id */
+	MPI_Comm_size(MPI_COMM_WORLD, &procs); /* get number of processes */
 
-	/* proccessor rank */
-	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-	/* Find out how many processes are being used */
-	MPI_Comm_size(MPI_COMM_WORLD, &procs);
+	MPI_Bcast(&A[0][0], N*N, MPI_FLOAT, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&B, N, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
-	/* Array with the row size and number of rows that each processor will handle */
-	int * first_row_A_array = (int*)malloc(procs * sizeof(int));
-	int * n_of_rows_A_array = (int*)malloc(procs * sizeof(int));
-	int * first_row_B_array = (int*)malloc(procs * sizeof(int));
-	int * n_of_rows_B_array = (int*)malloc(procs * sizeof(int));
-	for (i = 0; i < procs; i++) {
-		first_row_A_array[i] = 0;
-		n_of_rows_A_array[i] = 0;
-		first_row_B_array[i] = 0;
-		n_of_rows_B_array[i] = 0;
+	for (i = 0; i < N; i++)
+	{
+		map[i] = i % procs;
 	}
 
-	/* Main loop. After every iteration, a new column will have all 0 values down the [norm] index */
-	for (norm = 0; norm < N - 1; norm++) {
-
-		MPI_Bcast(&A[N*norm], N, MPI_FLOAT, 0, MPI_COMM_WORLD);
-		MPI_Bcast(&B[norm], 1, MPI_FLOAT, 0, MPI_COMM_WORLD);
-
-		/* subset of rows of this iteration */
-		int subset = N - 1 - norm;
-		/* number that indicates the step as a float */
-		float step = ((float)subset) / (procs);
-		/* First and last rows that this process will work into for this iteration */
-		int first_row = norm + 1 + ceil(step * (rank));
-		int last_row = norm + 1 + floor(step * (rank + 1));
-		if (last_row >= N) last_row = N - 1;
-		int number_of_rows = last_row - first_row + 1;
-
-		if (rank == 0) {
-
-			for (i = 1; i < procs; i++) {
-
-				/* We send to each process the amount of data that they are going to handle */
-				int first_row_rmte = norm + 1 + ceil(step * (i));
-				int last_row_rmte = norm + 1 + floor(step * (i + 1));
-				if (last_row_rmte >= N) last_row_rmte = N - 1;
-				int number_of_rows_rmte = last_row_rmte - first_row_rmte + 1;
-
-				/* In case this process isn't assigned any task, continue. This happens when there are more processors than rows */
-				//if( number_of_rows_rmte < 1 || first_row_rmte >= N ) continue;
-
-				if (number_of_rows_rmte < 0) number_of_rows_rmte = 0;
-				if (first_row_rmte >= N) { number_of_rows_rmte = 0; first_row_rmte = N - 1; };
-
-				first_row_A_array[i] = first_row_rmte * N;
-				first_row_B_array[i] = first_row_rmte;
-				n_of_rows_A_array[i] = number_of_rows_rmte * N;
-				n_of_rows_B_array[i] = number_of_rows_rmte;
-
-			}
-
-		}
-
-		MPI_Scatterv(
-			&A[0],              // send buffer
-			n_of_rows_A_array,  // array with number of elements in each chunk
-			first_row_A_array,  // array with pointers to initial element of each chunk
-			MPI_FLOAT,          // type of elements to send
-			&A[first_row * N],  // receive buffer
-			N * number_of_rows, // number of elements to receive
-			MPI_FLOAT,          // type of elements to receive
-			0,					// who sends
-			MPI_COMM_WORLD
-		);
-		MPI_Scatterv(
-			&B[0],
-			n_of_rows_B_array,
-			first_row_B_array,
-			MPI_FLOAT,
-			&B[first_row],
-			number_of_rows,
-			MPI_FLOAT,
-			0,
-			MPI_COMM_WORLD
-		);
-
-		/*  Gaussian elimination                   */
-
-		if (number_of_rows > 0 && first_row < N) {
-			/* Similar code than in the sequential case */
-			for (row = first_row; row <= last_row; row++) {
-
+	for (norm = 0; norm < N; norm++) {
+		MPI_Bcast(&A[norm][norm], N - norm, MPI_FLOAT, map[norm], MPI_COMM_WORLD);
+		MPI_Bcast(&B[norm], 1, MPI_FLOAT, map[norm], MPI_COMM_WORLD);
+		for (row = norm + 1; row < N; row++) {
+			if (map[row] == rank) {
 				mult = A[row][norm] / A[norm][norm];
-				for (col = norm; col < N; col++) {
-					A[row][col] -= A[norm][col] * mult;
+			}
+		}
+		for (row = norm + 1; row < N; row++) {
+			if (map[row] == rank) {
+				for (col = 0; col < N; col++) {
+					A[row][col] -= mult * A[norm][col];
 				}
-
-				B[row] -= B[norm] * mult;
+				B[row] -= (mult * B[norm]);
 			}
 		}
-
-
-		/* --------------------------------------- */
-		/*  Send back the results                  */
-		/*  -------------------------------------- */
-		/* Sender side */
-
-		if (rank != 0) {
-			if (number_of_rows > 0 && first_row < N) {
-				MPI_Isend(&A[first_row * N], N * number_of_rows, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &request);
-				MPI_Isend(&B[first_row], number_of_rows, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &request);
-			}
-		}
-		/* Receiver side */
-		else {
-
-			for (i = 1; i < procs; i++) {
-
-				// In case this process isn't assigned any task, continue. This happens when there are more processors than rows 
-				if (n_of_rows_B_array[i] < 1 || first_row_B_array[i] >= N) continue;
-
-				MPI_Recv(&A[first_row_A_array[i]], n_of_rows_A_array[i], MPI_FLOAT, i, 0, MPI_COMM_WORLD, &status);
-				MPI_Recv(&B[first_row_B_array[i]], n_of_rows_B_array[i], MPI_FLOAT, i, 0, MPI_COMM_WORLD, &status);
-			}
-
-
-		}
-
 	}
 
 	/* Back substitution */
-	if (rank == 0) {
-		for (row = N - 1; row >= 0; row--)
-		{
-			X[row] = B[row];
-			for (col = N - 1; col > row; col--)
-			{
-				X[row] -= A[row][col] * X[col];
-			}
-			X[row] /= A[row][row];
+	for (row = N - 1; row >= 0; row--) {
+		X[row] = B[row];
+		for (col = N - 1; col > row; col--) {
+			X[row] -= A[row][col] * X[col];
 		}
+		X[row] /= A[row][row];
 	}
-
-
-	MPI_Barrier(MPI_COMM_WORLD);
-
-	/* Free memory used for the arrays that we allocated previously */
-	free_memory();
-
-	MPI_Finalize();
 }
-
