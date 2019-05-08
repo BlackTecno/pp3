@@ -140,6 +140,8 @@ void main(int argc, char **argv) {
 	unsigned long long usecstart, usecstop;
 	struct tms cputstart, cputstop;  /* CPU times for my processes */
 
+	MPI_Init(&argc, &argv);
+
 	/* Process program parameters */
 	parameters(argc, argv);
 
@@ -198,8 +200,6 @@ void gauss() {
 	int i, norm, row, col;
 	float mult;
 	int map[MAXN];
-
-	MPI_Init(&argc, &argv);
 
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);   /* get current process id */
 	MPI_Comm_size(MPI_COMM_WORLD, &procs); /* get number of processes */
