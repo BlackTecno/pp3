@@ -222,8 +222,8 @@ void gauss() {
 	/* Main loop. After every iteration, a new column will have all 0 values down the [norm] index */
 	for (norm = 0; norm < N - 1; norm++) {
 
-		MPI_Bcast(&A[N*norm], N, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-		MPI_Bcast(&B[norm], 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+		MPI_Bcast(&A[N*norm], N, MPI_FLOAT, 0, MPI_COMM_WORLD);
+		MPI_Bcast(&B[norm], 1, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
 		/* subset of rows of this iteration */
 		int subset = N - 1 - norm;
@@ -264,10 +264,10 @@ void gauss() {
 			&A[0],              // send buffer
 			n_of_rows_A_array,  // array with number of elements in each chunk
 			first_row_A_array,  // array with pointers to initial element of each chunk
-			MPI_DOUBLE,          // type of elements to send
+			MPI_FLOAT,          // type of elements to send
 			&A[first_row * N],  // receive buffer
 			N * number_of_rows, // number of elements to receive
-			MPI_DOUBLE,          // type of elements to receive
+			MPI_FLOAT,          // type of elements to receive
 			0,					// who sends
 			MPI_COMM_WORLD
 		);
@@ -275,10 +275,10 @@ void gauss() {
 			&B[0],
 			n_of_rows_B_array,
 			first_row_B_array,
-			MPI_DOUBLE,
+			MPI_FLOAT,
 			&B[first_row],
 			number_of_rows,
-			MPI_DOUBLE,
+			MPI_FLOAT,
 			0,
 			MPI_COMM_WORLD
 		);
@@ -306,8 +306,8 @@ void gauss() {
 
 		if (rank != 0) {
 			if (number_of_rows > 0 && first_row < N) {
-				MPI_Isend(&A[first_row * N], N * number_of_rows, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &request);
-				MPI_Isend(&B[first_row], number_of_rows, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &request);
+				MPI_Isend(&A[first_row * N], N * number_of_rows, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &request);
+				MPI_Isend(&B[first_row], number_of_rows, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &request);
 			}
 		}
 		/* Receiver side */
@@ -318,8 +318,8 @@ void gauss() {
 				// In case this process isn't assigned any task, continue. This happens when there are more processors than rows 
 				if (n_of_rows_B_array[i] < 1 || first_row_B_array[i] >= N) continue;
 
-				MPI_Recv(&A[first_row_A_array[i]], n_of_rows_A_array[i], MPI_DOUBLE, i, 0, MPI_COMM_WORLD, &status);
-				MPI_Recv(&B[first_row_B_array[i]], n_of_rows_B_array[i], MPI_DOUBLE, i, 0, MPI_COMM_WORLD, &status);
+				MPI_Recv(&A[first_row_A_array[i]], n_of_rows_A_array[i], MPI_FLOAT, i, 0, MPI_COMM_WORLD, &status);
+				MPI_Recv(&B[first_row_B_array[i]], n_of_rows_B_array[i], MPI_FLOAT, i, 0, MPI_COMM_WORLD, &status);
 			}
 
 
