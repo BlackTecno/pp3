@@ -159,6 +159,8 @@ void main(int argc, char **argv) {
 	/* Gaussian Elimination */
 	gauss();
 
+	MPI_Finalize();
+
 	/* Stop Clock */
 	gettimeofday(&etstop, &tzdummy);
 	etstop2 = times(&cputstop);
@@ -229,8 +231,6 @@ void gauss() {
 			}
 		}
 	}
-
-	MPI_Finalize();
 
 	/* Back substitution */
 	for (row = N - 1; row >= 0; row--) {
