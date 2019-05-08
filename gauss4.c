@@ -248,4 +248,6 @@ void gauss() {
 		}
 		X[row] /= A[row][row];
 	}
+
+	MPI_Finalize();
 }
