@@ -199,7 +199,7 @@ void gauss() {
 	float mult;
 	int map[MAXN];
 
-	MPI_Init();
+	MPI_Init(&argc, &argv);
 
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);   /* get current process id */
 	MPI_Comm_size(MPI_COMM_WORLD, &procs); /* get number of processes */
