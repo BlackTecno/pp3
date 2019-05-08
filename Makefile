@@ -1,13 +1,8 @@
-CC=gcc
-SRCS= $(wildcard *.c)
-OBJS = $(SRCS:.c=.exe)
-LIBS = -fopenmp
+mpi_matrixmul: mpi_matrixmul.c
+	mpicc -o mpi_matrixmul mpi_matrixmul.c
 
-
-all:$(OBJS)
-
-%.exe:%.c
-	$(CC) $^ $(LIBS) -o $@
+gauss: gauss.c
+	mpicc -o gauss gauss.c
 
 clean:
-	rm -f ./*.o ./*.exe
+	rm -f *.exe 
