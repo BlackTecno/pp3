@@ -15,7 +15,7 @@ int N;  /* Matrix size */
 int procs, rank;  /* Number of processors to use */
 
 /* Matrices and vectors */
-volatile float A[MAXN][MAXN], B[MAXN], X[MAXN];
+float A[MAXN][MAXN], B[MAXN], X[MAXN];
 /* A * X = B, solve for X */
 
 /* junk */
@@ -203,8 +203,8 @@ void gauss() {
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);   /* get current process id */
 	MPI_Comm_size(MPI_COMM_WORLD, &procs); /* get number of processes */
 
-	MPI_Bcast(A[0][0], N*N, MPI_FLOAT, 0, MPI_COMM_WORLD);
-	MPI_Bcast(B, N, MPI_FLOAT, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&A[0][0], N*N, MPI_FLOAT, 0, MPI_COMM_WORLD);
+	MPI_Bcast(&B, N, MPI_FLOAT, 0, MPI_COMM_WORLD);
 
 	for (i = 0; i < N; i++)
 	{
