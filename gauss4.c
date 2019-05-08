@@ -33,7 +33,7 @@ unsigned int time_seed() {
 	struct timeval t;
 	struct timezone tzdummy;
 
-	gettimeofday(&t, &tzdummy);
+//	gettimeofday(&t, &tzdummy);
 	return (unsigned int)(t.tv_usec);
 }
 
@@ -167,8 +167,8 @@ void main(int argc, char **argv) {
 	etstop = MPI_Wtime();
 
 	/* Stop Clock */
-	gettimeofday(&etstop, &tzdummy);
-	etstop2 = times(&cputstop);
+//	gettimeofday(&etstop, &tzdummy);
+//	etstop2 = times(&cputstop);
 	printf("Stopped clock.\n");
 	usecstart = (unsigned long long)etstart * 1000000 + etstart;
 	usecstop = (unsigned long long)etstop * 1000000 + etstop;
