@@ -162,9 +162,11 @@ void main(int argc, char **argv) {
 	/* Gaussian Elimination */
 	gauss();
 
-	MPI_Finalize();
+
 
 	etstop = MPI_Wtime();
+
+	MPI_Finalize();
 
 	/* Stop Clock */
 //	gettimeofday(&etstop, &tzdummy);
