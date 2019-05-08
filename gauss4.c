@@ -162,7 +162,7 @@ void main(int argc, char **argv) {
 	/* Gaussian Elimination */
 	gauss();
 
-	MPI_Finalize();
+//	MPI_Finalize();
 
 	etstop = MPI_Wtime();
 
